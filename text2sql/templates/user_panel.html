@@ -57,8 +57,8 @@
 
   <!-- SQL Output -->
   <div id="sql-output" class="card shadow rounded-4 p-4 mb-4 d-none">
-    <h5 class="mb-3 text-primary"><i class="bi bi-terminal"></i> Generated SQL Query</h5>
-    <code id="sql-text" class="text-wrap"></code>
+    <h5 class="mb-3 text-primary"><i class="bi bi-terminal"></i> Generated SQL Query (Editable)</h5>
+    <textarea id="sql-text" class="form-control" rows="5" placeholder="Generated SQL will appear here..."></textarea>
   </div>
 
   <!-- Execute SQL Button -->
@@ -176,7 +176,7 @@ document.getElementById("generateSQLButton").addEventListener("click", async fun
       if (response.ok) {
         const sqlOutput = document.getElementById("sql-output");
         const sqlText = document.getElementById("sql-text");
-        sqlText.innerText = result.sql_query;
+        sqlText.value = result.sql_query;
         sqlOutput.classList.remove("d-none");
       } else {
         alert(result.error || "Failed to generate SQL query.");
@@ -190,7 +190,7 @@ document.getElementById("generateSQLButton").addEventListener("click", async fun
 
   document.getElementById("executeSQLButton").addEventListener("click", async function () {
   const dbId = document.getElementById("database").value;
-  const sqlQuery = document.getElementById("sql-text").innerText;
+  const sqlQuery = document.getElementById("sql-text").value;
 
   if (!dbId || isNaN(parseInt(dbId))) {
     alert("Please select a valid database.");

@@ -84,6 +84,8 @@
       <div class="col-md-3 mt-md-0 mt-2">
         <button class="btn btn-primary w-100" onclick="adminFetchSchema()">Load Schema</button>
       </div>
+      
+      
     </div>
   </div>
 
@@ -112,13 +114,16 @@
 
   <!-- SQL Output & Execution -->
   <div id="admin-sql-output" class="card shadow rounded-4 p-4 mb-4 d-none">
-    <h5 class="mb-3"><i class="bi bi-terminal"></i> Generated SQL</h5>
-    <code id="admin-sql-text" class="text-wrap"></code>
+    <h5 class="mb-3"><i class="bi bi-terminal"></i> Generated SQL (Editable)</h5>
+    <textarea id="admin-sql-text" class="form-control" rows="5" placeholder="Generated SQL will appear here..."></textarea>
   </div>
 
   <div class="text-end mb-4">
     <button id="admin-executeSQLButton" class="btn btn-danger">
       <i class="bi bi-play-circle"></i> Execute SQL (Write Allowed)
+    </button>
+    <button id="refreshSchemaBtn" class="bi bi-terminal">
+      🔄 Refresh Schema & Previews
     </button>
   </div>
 
@@ -191,6 +196,9 @@
     }
   }
 
+  // Refresh button handler
+  document.getElementById("refreshSchemaBtn").addEventListener("click", adminFetchSchema);
+
   // Generate SQL from natural language
   document.getElementById("admin-generateSQLButton").addEventListener("click", async function () {
     const dbId = document.getElementById("admin-database").value;
@@ -225,7 +233,7 @@
       if (response.ok) {
         const sqlOutput = document.getElementById("admin-sql-output");
         const sqlText = document.getElementById("admin-sql-text");
-        sqlText.innerText = result.sql_query;
+        sqlText.value = result.sql_query;
         sqlOutput.classList.remove("d-none");
       } else {
         alert(result.error || "Failed to generate SQL query.");
@@ -239,7 +247,7 @@
   // Execute SQL
   document.getElementById("admin-executeSQLButton").addEventListener("click", async function () {
     const dbId = document.getElementById("admin-database").value;
-    const sqlQuery = document.getElementById("admin-sql-text").innerText;
+    const sqlQuery = document.getElementById("admin-sql-text").value;
 
     if (!dbId || isNaN(parseInt(dbId))) {
       alert("Please select a valid database.");
@@ -288,5 +296,4 @@
     }
   });
 </script>
-
 {% endblock %}
