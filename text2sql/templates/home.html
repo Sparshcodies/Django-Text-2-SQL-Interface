@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}Home | SQL Genie{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="glass-container" data-aos="zoom-in">
+    <h1>Transform Text to SQL</h1>
+    <p>Type your question in plain English and let the magic happen.</p>
+    <div>
+      <a class="btn btn-glow" href="{% url 'login_admin' %}">Login as Admin</a>
+      <a class="btn btn-glow" href="{% url 'login_user' %}">Login as User</a>
+    </div>
+  </div>
+
+  <!-- About Section -->
+  <div id="about" class="about-section text-center" data-aos="fade-up">
+    <h2>About Us</h2>
+    <p>
+      We’re final year students passionate about solving real-world problems using AI.
+      This project converts natural language into SQL queries for easy and efficient data access.
+      Built using Django, NLP, and love 💙.
+    </p>
+  </div>
+</div>
+{% endblock %}

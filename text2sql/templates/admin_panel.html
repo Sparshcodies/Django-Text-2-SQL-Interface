@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+{% block title %}Admin Panel{% endblock %}
+
+{% block content %}
+<div class="glass-container mt-5" data-aos="fade-up">
+  <h1 class="text-center mb-4">👨‍💼 Admin Dashboard</h1>
+
+  <p class="text-center">Manage databases, monitor users, and control access to SQL Genie features.</p>
+
+
+  <!-- Upload New Database -->
+<!-- Upload New Database (Enhanced UI) -->
+<div class="card shadow-lg glass-container mt-4 p-4" data-aos="fade-up">
+  <h4 class="text-center mb-4"><i class="bi bi-cloud-upload"></i> Upload a New Database</h4>
+  <form method="POST" enctype="multipart/form-data" action="{% url 'upload_database' %}" class="row g-3 align-items-center justify-content-center">
+    {% csrf_token %}
+    <div class="col-md-8">
+      <input type="file" name="database_file" class="form-control" required>
+    </div>
+    <div class="col-md-4 text-end">
+      <button type="submit" class="btn btn-success w-100">
+        <i class="bi bi-upload"></i> Upload
+      </button>
+    </div>
+  </form>
+
+  {% if messages %}
+    <div class="mt-3">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} mt-2" role="alert">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+</div>
+
+  <!-- View Existing Databases (Enhanced UI) -->
+<div class="card shadow glass-container mt-5 p-4" data-aos="fade-up">
+  <h4 class="text-center mb-4"><i class="bi bi-folder2-open"></i> Available Databases</h4>
+  {% if databases %}
+    <div class="table-responsive">
+      <table class="table table-hover table-borderless align-middle text-white">
+        <thead class="table-dark rounded-3">
+          <tr>
+            <th scope="col"><i class="bi bi-database"></i> Name</th>
+            <th scope="col"><i class="bi bi-calendar3"></i> Uploaded At</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for db in databases %}
+            <tr>
+              <td>{{ db.name }}</td>
+              <td>{{ db.uploaded_at|date:"F j, Y, g:i a" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="alert alert-warning text-center" role="alert">
+      No databases uploaded yet.
+    </div>
+  {% endif %}
+</div>
+
+
+ <!-- Enhanced SQL Generator and Executor -->
+<div class="mt-5" data-aos="fade-up">
+  <h4 class="text-center mb-4">💬 Ask a Question (Natural Language to SQL)</h4>
+
+  <!-- Select Database -->
+  <div class="card shadow rounded-4 p-4 mb-4">
+    <h5 class="mb-3"><i class="bi bi-database"></i> Select a Database</h5>
+    <div class="row">
+      <div class="col-md-9">
+        <select id="admin-database" class="form-select">
+          <option disabled selected>Select a database...</option>
+          {% for db in databases %}
+            <option value="{{ db.id }}">{{ db.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3 mt-md-0 mt-2">
+        <button class="btn btn-primary w-100" onclick="adminFetchSchema()">Load Schema</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Schema Display -->
+  <div id="admin-schema-display" class="card shadow-sm rounded-4 p-4 mb-4 d-none">
+    <h5 class="mb-3"><i class="bi bi-diagram-3"></i> Schema Details</h5>
+    <pre id="admin-schema-text" class="text-wrap"></pre>
+  </div>
+  <!-- Table Previews -->
+<div id="admin-table-preview" class="card shadow-sm rounded-4 p-4 mb-4 d-none">
+  <h5 class="mb-3"><i class="bi bi-table"></i> Table Previews</h5>
+  <div id="admin-preview-content"></div>
+</div>
+
+  <!-- Query Input -->
+  <div class="card shadow-lg rounded-4 p-4 mb-4">
+    <h5 class="mb-3"><i class="bi bi-chat-dots"></i> Ask in Natural Language</h5>
+    <form id="admin-query-form">
+      {% csrf_token %}
+      <textarea id="admin-user-query" class="form-control mb-3" rows="4" placeholder="e.g., Show total sales per region..."></textarea>
+      <button id="admin-generateSQLButton" type="button" class="btn btn-success w-100">
+        <i class="bi bi-magic"></i> Generate SQL
+      </button>
+    </form>
+  </div>
+
+  <!-- SQL Output & Execution -->
+  <div id="admin-sql-output" class="card shadow rounded-4 p-4 mb-4 d-none">
+    <h5 class="mb-3"><i class="bi bi-terminal"></i> Generated SQL</h5>
+    <code id="admin-sql-text" class="text-wrap"></code>
+  </div>
+
+  <div class="text-end mb-4">
+    <button id="admin-executeSQLButton" class="btn btn-danger">
+      <i class="bi bi-play-circle"></i> Execute SQL (Write Allowed)
+    </button>
+  </div>
+
+  <!-- Execution Result -->
+  <div id="admin-query-results" class="card shadow rounded-4 p-4 mt-4 d-none">
+    <h5 class="mb-3"><i class="bi bi-clipboard-data"></i> Query Result</h5>
+    <div id="admin-results-table"></div>
+  </div>
+</div>
+<form method="POST" action="{% url 'logout' %}" class="d-inline">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-outline-danger">
+    <i class="bi bi-box-arrow-right"></i> Logout
+  </button>
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // Load schema and table previews
+  async function adminFetchSchema() {
+    const dbId = document.getElementById("admin-database").value;
+    if (!dbId || isNaN(parseInt(dbId))) {
+      alert("Please select a valid database");
+      return;
+    }
+
+    try {
+      const schemaText = document.getElementById("admin-schema-text");
+      schemaText.innerText = "Loading...";
+      document.getElementById("admin-schema-display").classList.remove("d-none");
+
+      const response = await fetch(`/fetch_schema/?database_id=${dbId}`);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+      const data = await response.json();
+
+      // Display schema
+      schemaText.innerText = "";
+      for (const [table, columns] of Object.entries(data.schema)) {
+        schemaText.innerText += `Table: ${table}\n  Columns: ${columns.join(", ")}\n\n`;
+      }
+
+      // Display table previews
+      const previewDiv = document.getElementById("admin-table-preview");
+      const previewContent = document.getElementById("admin-preview-content");
+      previewContent.innerHTML = "";
+
+      if (data.table_previews && Object.keys(data.table_previews).length > 0) {
+        for (const [table, html] of Object.entries(data.table_previews)) {
+          const tableHeader = document.createElement("h6");
+          tableHeader.innerHTML = `<strong>Preview of ${table}</strong>`;
+          previewContent.appendChild(tableHeader);
+
+          const tableContainer = document.createElement("div");
+          tableContainer.innerHTML = html;
+          previewContent.appendChild(tableContainer);
+
+          const divider = document.createElement("hr");
+          previewContent.appendChild(divider);
+        }
+        previewDiv.classList.remove("d-none");
+      } else {
+        previewContent.innerHTML = "<div class='alert alert-warning'>No table previews available.</div>";
+        previewDiv.classList.remove("d-none");
+      }
+    } catch (error) {
+      console.error("Error fetching schema:", error);
+      document.getElementById("admin-schema-text").innerText = `Error: ${error.message}`;
+    }
+  }
+
+  // Generate SQL from natural language
+  document.getElementById("admin-generateSQLButton").addEventListener("click", async function () {
+    const dbId = document.getElementById("admin-database").value;
+    const userQuery = document.getElementById("admin-user-query").value;
+
+    if (!dbId || isNaN(parseInt(dbId))) {
+      alert("Please select a valid database first.");
+      return;
+    }
+    if (!userQuery.trim()) {
+      alert("Please enter your question.");
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append("database_id", dbId);
+      formData.append("user_query", userQuery);
+
+      const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+      const response = await fetch("/process_query/", {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": csrfToken,
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        const sqlOutput = document.getElementById("admin-sql-output");
+        const sqlText = document.getElementById("admin-sql-text");
+        sqlText.innerText = result.sql_query;
+        sqlOutput.classList.remove("d-none");
+      } else {
+        alert(result.error || "Failed to generate SQL query.");
+      }
+    } catch (error) {
+      console.error("Error generating SQL:", error);
+      alert("An error occurred while generating the SQL query.");
+    }
+  });
+
+  // Execute SQL
+  document.getElementById("admin-executeSQLButton").addEventListener("click", async function () {
+    const dbId = document.getElementById("admin-database").value;
+    const sqlQuery = document.getElementById("admin-sql-text").innerText;
+
+    if (!dbId || isNaN(parseInt(dbId))) {
+      alert("Please select a valid database.");
+      return;
+    }
+    if (!sqlQuery.trim()) {
+      alert("No SQL query to execute.");
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append("database_id", dbId);
+      formData.append("sql_query", sqlQuery);
+
+      const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+      const response = await fetch("/execute_query/", {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": csrfToken,
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      const resultsDiv = document.getElementById("admin-query-results");
+      const resultsTable = document.getElementById("admin-results-table");
+      resultsTable.innerHTML = "";
+
+      if (response.ok) {
+        if (result.results) {
+          resultsTable.innerHTML = result.results;
+        } else if (result.message) {
+          resultsTable.innerHTML = `<div class='alert alert-success'>${result.message}</div>`;
+        }
+        resultsDiv.classList.remove("d-none");
+      } else {
+        resultsTable.innerHTML = `<div class='alert alert-danger'>${result.error}</div>`;
+        resultsDiv.classList.remove("d-none");
+      }
+    } catch (error) {
+      console.error("Execution error:", error);
+      alert("An error occurred while executing the SQL query.");
+    }
+  });
+</script>
+
+{% endblock %}

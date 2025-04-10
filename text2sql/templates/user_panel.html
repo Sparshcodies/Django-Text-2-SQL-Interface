@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% block title %}User Panel{% endblock %}
+
+{% block content %}
+<div class="container py-5 glass-container" data-aos="fade-up">
+    <h1 class="text-center mb-5 fw-bold text-primary">👤 User Panel</h1>
+
+    <div class="text-end mb-3">
+        <form method="post" action="{% url 'logout' %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger">Logout</button>
+          </form>
+    </div>
+
+  <!-- Select Database -->
+  <div class="card shadow rounded-4 p-4 mb-4">
+    <h4 class="mb-3 text-secondary"><i class="bi bi-database"></i> Select a Database</h4>
+    <div class="row">
+      <div class="col-md-9">
+        <select id="database" class="form-select rounded-3 border-primary">
+          <option disabled selected>Select a database...</option>
+          {% for db in databases %}
+            <option value="{{ db.id }}">{{ db.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3 mt-md-0 mt-2">
+        <button class="btn btn-primary w-100" onclick="fetchSchema()">Load Schema</button>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Schema Display -->
+  <div id="schema-display" class="card shadow-sm rounded-4 p-4 mb-4 d-none">
+    <h5 class="mb-3 text-info"><i class="bi bi-diagram-3"></i> Schema Details</h5>
+    <pre id="schema-text" class="text-wrap"></pre>
+  </div>
+
+  <!-- Table Preview -->
+  <div id="table-preview" class="card shadow-sm rounded-4 p-4 mb-4 d-none">
+    <h5 class="mb-3 text-warning"><i class="bi bi-table"></i> Table Preview</h5>
+    <div id="preview-content"></div>
+  </div>
+
+  <!-- Query Input -->
+  <div class="card shadow-lg rounded-4 p-4 mb-4">
+    <h4 class="mb-3 text-success"><i class="bi bi-chat-text"></i> Ask a Question</h4>
+    <form id="query-form">
+      {% csrf_token %}
+      <textarea id="user-query" class="form-control rounded-3 mb-3" rows="4" placeholder="Type your question in natural language..."></textarea>
+      <button id="generateSQLButton" type="button" class="btn btn-success w-100">
+        <i class="bi bi-code-slash"></i> Generate SQL
+      </button>
+    </form>
+  </div>
+
+  <!-- SQL Output -->
+  <div id="sql-output" class="card shadow rounded-4 p-4 mb-4 d-none">
+    <h5 class="mb-3 text-primary"><i class="bi bi-terminal"></i> Generated SQL Query</h5>
+    <code id="sql-text" class="text-wrap"></code>
+  </div>
+
+  <!-- Execute SQL Button -->
+  <div class="text-end">
+    <button id="executeSQLButton" class="btn btn-danger px-4">
+      <i class="bi bi-play-circle"></i> Execute Query
+    </button>
+  </div>
+
+  <!-- Query Results -->
+  <div id="query-results" class="card shadow rounded-4 p-4 mt-4 d-none">
+    <h5 class="mb-3 text-dark"><i class="bi bi-bar-chart-line"></i> Results</h5>
+    <div id="results-table"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  async function fetchSchema() {
+  const dbId = document.getElementById("database").value;
+  if (!dbId || isNaN(parseInt(dbId))) {
+  alert("Please select a valid database");
+  return;
+}
+
+  try {
+    
+    // Show loading indicator
+    document.getElementById("schema-text").innerText = "Loading...";
+    document.getElementById("schema-display").classList.remove("d-none");
+    
+    const response = await fetch(`/fetch_schema/?database_id=${dbId}`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log("Schema data received:", data); // For debugging
+
+    // Display Schema
+    const schemaDiv = document.getElementById("schema-display");
+    const schemaText = document.getElementById("schema-text");
+    schemaText.innerText = "";
+    
+    for (const [table, columns] of Object.entries(data.schema)) {
+      schemaText.innerText += `Table: ${table}\n  Columns: ${columns.join(", ")}\n\n`;
+    }
+    schemaDiv.classList.remove("d-none");
+
+    // Display Table Previews
+    const previewDiv = document.getElementById("table-preview");
+    const previewContent = document.getElementById("preview-content");
+    previewContent.innerHTML = ""; // Clear previous content
+    
+    if (data.table_previews && Object.keys(data.table_previews).length > 0) {
+      for (const [table, html] of Object.entries(data.table_previews)) {
+        const tableHeader = document.createElement('h6');
+        tableHeader.textContent = table;
+        previewContent.appendChild(tableHeader);
+        
+        const tableContainer = document.createElement('div');
+        tableContainer.innerHTML = html; // Insert the HTML table
+        previewContent.appendChild(tableContainer);
+        
+        const divider = document.createElement('hr');
+        previewContent.appendChild(divider);
+      }
+      previewDiv.classList.remove("d-none");
+    } else {
+      previewContent.innerHTML = "<div class='alert alert-warning'>No table previews available</div>";
+      previewDiv.classList.remove("d-none");
+    }
+  } catch (error) {
+    console.error("Error fetching schema:", error);
+    document.getElementById("schema-text").innerText = `Error: ${error.message}`;
+  }
+}
+
+
+document.getElementById("generateSQLButton").addEventListener("click", async function () {
+    const dbId = document.getElementById("database").value;
+    const userQuery = document.getElementById("user-query").value;
+
+    // Input validation
+    if (!dbId || isNaN(parseInt(dbId))) {
+      alert("Please select a valid database first.");
+      return;
+    }
+    if (!userQuery.trim()) {
+      alert("Please enter your question.");
+      return;
+    }
+
+    try {
+      // Prepare the POST request
+      const formData = new FormData();
+      formData.append("database_id", dbId);
+      formData.append("user_query", userQuery);
+
+      // CSRF token (Django requires this)
+      const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+      const response = await fetch("/process_query/", {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": csrfToken,
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        const sqlOutput = document.getElementById("sql-output");
+        const sqlText = document.getElementById("sql-text");
+        sqlText.innerText = result.sql_query;
+        sqlOutput.classList.remove("d-none");
+      } else {
+        alert(result.error || "Failed to generate SQL query.");
+      }
+    } catch (error) {
+      console.error("Error generating SQL:", error);
+      alert("An error occurred while generating the SQL query.");
+    }
+  });
+
+
+  document.getElementById("executeSQLButton").addEventListener("click", async function () {
+  const dbId = document.getElementById("database").value;
+  const sqlQuery = document.getElementById("sql-text").innerText;
+
+  if (!dbId || isNaN(parseInt(dbId))) {
+    alert("Please select a valid database.");
+    return;
+  }
+
+  if (!sqlQuery.trim()) {
+    alert("No SQL query to execute.");
+    return;
+  }
+
+  try {
+    const formData = new FormData();
+    formData.append("database_id", dbId);
+    formData.append("sql_query", sqlQuery);
+
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    const response = await fetch("/execute_query/", {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": csrfToken,
+      },
+      body: formData,
+    });
+
+    const result = await response.json();
+
+    const resultsDiv = document.getElementById("query-results");
+    const resultsTable = document.getElementById("results-table");
+    resultsTable.innerHTML = ""; // Clear previous results
+
+    if (response.ok) {
+      if (result.results) {
+        resultsTable.innerHTML = result.results;
+      } else if (result.message) {
+        resultsTable.innerHTML = `<div class='alert alert-success'>${result.message}</div>`;
+      }
+      resultsDiv.classList.remove("d-none");
+    } else {
+      resultsTable.innerHTML = `<div class='alert alert-danger'>${result.error}</div>`;
+      resultsDiv.classList.remove("d-none");
+    }
+
+  } catch (error) {
+    console.error("Execution error:", error);
+    alert("An error occurred while executing the SQL query.");
+  }
+});
+
+</script>
+{% endblock %}

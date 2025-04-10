@@ -1,0 +1,16 @@
+body {
+    background-color: #f8f9fa; /* Light gray background */
+}
+
+h1 {
+    color: #333; /* Darker text for better visibility */
+}
+
+textarea {
+    width: 100%;
+    height: 100px;
+}
+
+button {
+    margin-top: 10px;
+}

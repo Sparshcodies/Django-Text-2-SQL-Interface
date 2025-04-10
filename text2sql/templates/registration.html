@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}User Registration{% endblock %}
+
+{% block content %}
+<div class="container glass-container" data-aos="zoom-in">
+  <h2 class="mb-4">User Registration</h2>
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label for="id_username">Username:</label>
+      <input type="text" name="username" id="id_username" class="form-control" required>
+    </div>
+    <div class="mb-3">
+      <label for="id_email">Email:</label>
+      <input type="email" name="email" id="id_email" class="form-control" required>
+    </div>
+    <div class="mb-3">
+      <label for="id_password1">Password:</label>
+      <input type="password" name="password1" id="id_password1" class="form-control" required>
+    </div>
+    <div class="mb-3">
+      <label for="id_password2">Confirm Password:</label>
+      <input type="password" name="password2" id="id_password2" class="form-control" required>
+    </div>
+
+    <button type="submit" class="btn btn-glow">Register</button>
+    <a href="{% url 'login_user' %}" class="btn btn-outline-secondary ms-2">Already have an account?</a>
+  </form>
+
+  {% if messages %}
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      {% for message in messages %}
+        Swal.fire({
+          icon: "{{ message.tags|default:'info' }}",
+          title: "{{ message|escapejs }}",
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 3500,
+          timerProgressBar: true,
+          background: '#fefefe',
+          color: '#333',
+          iconColor: '{% if message.tags == "success" %}#28a745{% elif message.tags == "error" %}#dc3545{% else %}#17a2b8{% endif %}',
+          showClass: {
+            popup: 'animate__animated animate__fadeInDown'
+          },
+          hideClass: {
+            popup: 'animate__animated animate__fadeOutUp'
+          }
+        });
+      {% endfor %}
+    });
+  </script>
+  {% endif %}
+</div>
+{% endblock %}
