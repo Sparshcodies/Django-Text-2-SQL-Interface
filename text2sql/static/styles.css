@@ -1,16 +1,115 @@
-body {
-    background-color: #f8f9fa; /* Light gray background */
-}
+body, html {
+    height: 100%;
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    color: #fff;
+    background: transparent;
+  }
 
-h1 {
-    color: #333; /* Darker text for better visibility */
-}
-
-textarea {
+  #vanta-bg {
+    position: fixed;
     width: 100%;
-    height: 100px;
-}
+    height: 100%;
+    z-index: -1;
+  }
 
-button {
-    margin-top: 10px;
+  .glass-container {
+    max-width: 800px;
+    margin: auto;
+    margin-top: 8%;
+    padding: 3rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 0 25px rgba(0, 255, 255, 0.2);
+    text-align: center;
+  }
+
+  .glass-container h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 3rem;
+    color: #00e0ff;
+    margin-bottom: 1.5rem;
+  }
+
+  .glass-container p {
+    font-size: 1.2rem;
+    margin-bottom: 2rem;
+  }
+
+  .btn-glow {
+    background: linear-gradient(90deg, #6a11cb 0%, #2575fc 100%);
+    color: white;
+    font-weight: 600;
+    padding: 0.75rem 2rem;
+    border-radius: 30px;
+    margin: 0.5rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
+    border: none;
+  }
+
+  .btn-glow:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.7);
+  }
+
+  .about-section {
+    margin-top: 5rem;
+    padding: 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .about-section h2 {
+    color: #00e0ff;
+    font-family: 'Orbitron', sans-serif;
+    margin-bottom: 1rem;
+  }
+
+  .navbar {
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+  }
+
+  .navbar .nav-link {
+    color: #ccc;
+    font-weight: 500;
+  }
+
+  .navbar .nav-link:hover {
+    color: #fff;
+  }
+
+  .alert {
+  font-weight: 500;
+  border-radius: 10px;
+  padding: 15px 20px;
+  font-size: 16px;
+  margin-top: 20px;
+  animation: fadeInSlide 0.6s ease-in-out;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  }
+
+  .alert-danger {
+  background: linear-gradient(135deg, #f85032, #e73827);
+  color: #fff;
+  border: none;
+  }
+
+  .alert-success {
+  background: linear-gradient(135deg, #56ab2f, #a8e063);
+  color: #fff;
+  border: none;
+  }
+
+@keyframes fadeInSlide {
+0% {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+100% {
+  opacity: 1;
+  transform: translateY(0);
+}
 }

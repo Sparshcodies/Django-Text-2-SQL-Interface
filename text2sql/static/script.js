@@ -1,144 +1,262 @@
+AOS.init({ duration: 1200 });
+VANTA.NET({
+    el: "#vanta-bg",
+    mouseControls: true,
+    touchControls: true,
+    minHeight: 200.00,
+    minWidth: 200.00,
+    scale: 1.0,
+    scaleMobile: 1.0,
+    color: 0x00ffff,
+    backgroundColor: 0x0a0f24
+});
 
-function loadSchema() {
-    let databaseId = document.getElementById("database").value;
-    
-    fetch(`/text2sql/fetch-schema/?database_id=${databaseId}`)
-    .then(response => response.json())
-    .then(data => {
-        let schemaDisplay = document.getElementById("schema-display");
-        schemaDisplay.innerHTML = "<h3>Schema:</h3>";
-        for (let table in data.schema) {
-            schemaDisplay.innerHTML += `<b>${table}</b>: ${data.schema[table].join(", ")}<br>`;
-        }
-
-        let tablePreview = document.getElementById("table-preview");
-        tablePreview.innerHTML = "<h3>Table Previews:</h3>";
-        for (let table in data.table_previews) {
-            tablePreview.innerHTML += `<h4>${table}</h4> ${data.table_previews[table]}`;
-        }
-    })
-    .catch(error => console.error("Error loading schema:", error));
+// --- ADMIN PANEL JS ---
+async function adminFetchSchema() {
+const dbId = document.getElementById("admin-database").value;
+if (!dbId || isNaN(parseInt(dbId))) {
+    alert("Please select a valid database");
+    return;
 }
 
+try {
+    const schemaText = document.getElementById("admin-schema-text");
+    schemaText.innerText = "Loading...";
+    document.getElementById("admin-schema-display").classList.remove("d-none");
 
+    const response = await fetch(`/fetch_schema/?database_id=${dbId}`);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
+    const data = await response.json();
+    schemaText.innerText = "";
+    for (const [table, columns] of Object.entries(data.schema)) {
+    schemaText.innerText += `Table: ${table}\n  Columns: ${columns.join(", ")}\n\n`;
+    }
 
-function getCSRFToken() {
-    let tokenElement = document.querySelector('[name=csrfmiddlewaretoken]');
-    return tokenElement ? tokenElement.value : '';
-}
+    const previewDiv = document.getElementById("admin-table-preview");
+    const previewContent = document.getElementById("admin-preview-content");
+    previewContent.innerHTML = "";
 
-document.addEventListener("DOMContentLoaded", function () {
-    let generateSQLButton = document.getElementById("generateSQLButton");
-    if (generateSQLButton) {
-        generateSQLButton.addEventListener("click", generateSQL);
+    if (data.table_previews && Object.keys(data.table_previews).length > 0) {
+    for (const [table, html] of Object.entries(data.table_previews)) {
+        const tableHeader = document.createElement("h6");
+        tableHeader.innerHTML = `<strong>Preview of ${table}</strong>`;
+        previewContent.appendChild(tableHeader);
+
+        const tableContainer = document.createElement("div");
+        tableContainer.innerHTML = html;
+        previewContent.appendChild(tableContainer);
+
+        const divider = document.createElement("hr");
+        previewContent.appendChild(divider);
+    }
+    previewDiv.classList.remove("d-none");
     } else {
-        console.error("Generate SQL button not found!");
+    previewContent.innerHTML = "<div class='alert alert-warning'>No table previews available.</div>";
+    previewDiv.classList.remove("d-none");
+    }
+} catch (error) {
+    console.error("Error fetching schema:", error);
+    document.getElementById("admin-schema-text").innerText = `Error: ${error.message}`;
+}
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+const refreshBtn = document.getElementById("refreshSchemaBtn");
+if (refreshBtn) refreshBtn.addEventListener("click", adminFetchSchema);
+
+const generateSQL = document.getElementById("admin-generateSQLButton");
+if (generateSQL) generateSQL.addEventListener("click", async function () {
+    const dbId = document.getElementById("admin-database").value;
+    const userQuery = document.getElementById("admin-user-query").value;
+
+    if (!dbId || isNaN(parseInt(dbId))) return alert("Please select a valid database first.");
+    if (!userQuery.trim()) return alert("Please enter your question.");
+
+    try {
+    const formData = new FormData();
+    formData.append("database_id", dbId);
+    formData.append("user_query", userQuery);
+
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const response = await fetch("/process_query/", {
+        method: "POST",
+        headers: { "X-CSRFToken": csrfToken },
+        body: formData,
+    });
+
+    const result = await response.json();
+    if (response.ok) {
+        document.getElementById("admin-sql-text").value = result.sql_query;
+        document.getElementById("admin-sql-output").classList.remove("d-none");
+    } else {
+        alert(result.error || "Failed to generate SQL query.");
+    }
+    } catch (error) {
+    console.error("Error generating SQL:", error);
+    alert("An error occurred while generating the SQL query.");
     }
 });
 
-function generateSQL() {
-    let databaseElement = document.getElementById("database");
-    let userQueryElement = document.getElementById("user-query");
+const executeSQL = document.getElementById("admin-executeSQLButton");
+if (executeSQL) executeSQL.addEventListener("click", async function () {
+    const dbId = document.getElementById("admin-database").value;
+    const sqlQuery = document.getElementById("admin-sql-text").value;
 
-    if (!databaseElement || !userQueryElement) {
-        console.error("Database dropdown or user query input not found!");
-        return;
-    }
+    if (!dbId || isNaN(parseInt(dbId))) return alert("Please select a valid database.");
+    if (!sqlQuery.trim()) return alert("No SQL query to execute.");
 
-    let databaseId = databaseElement.value;
-    let userQuery = userQueryElement.value;
-    let csrfTokenElement = document.querySelector("[name=csrfmiddlewaretoken]");
-    let csrfToken = csrfTokenElement ? csrfTokenElement.value : "";
+    try {
+    const formData = new FormData();
+    formData.append("database_id", dbId);
+    formData.append("sql_query", sqlQuery);
 
-    if (!databaseId || !userQuery) {
-        alert("Please select a database and enter a query.");
-        return;
-    }
-
-    console.log("Sending request with:", { databaseId, userQuery });
-
-    fetch("/text2sql/process-query/", {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const response = await fetch("/execute_query/", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "X-CSRFToken": csrfToken,
-        },
-        body: `database_id=${databaseId}&user_query=${userQuery}`,
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            alert("Error: " + data.error);
-            return;
-        }
-        document.getElementById("sql-output").innerText = data.sql_query;
-        console.log("SQL Query:", data.sql_query);
-    })
-    .catch(error => console.error("Error generating SQL query:", error));
-}
+        headers: { "X-CSRFToken": csrfToken },
+        body: formData,
+    });
 
+    const result = await response.json();
+    const resultsTable = document.getElementById("admin-results-table");
+    resultsTable.innerHTML = "";
 
-
-function forgotPassword() {
-    alert("Contact the administrator at admin@example.com for password reset.");
-}
-
-function forgotUsername() {
-    alert("Contact the administrator at admin@example.com to retrieve your username.");
-}
-
-document.addEventListener("DOMContentLoaded", function () {
-    let executeSQLButton = document.getElementById("executeSQLButton");
-    if (executeSQLButton) {
-        executeSQLButton.addEventListener("click", executeSQL);
+    if (response.ok) {
+        resultsTable.innerHTML = result.results || `<div class='alert alert-success'>${result.message}</div>`;
+        document.getElementById("admin-query-results").classList.remove("d-none");
     } else {
-        console.error("Execute SQL button not found!");
+        resultsTable.innerHTML = `<div class='alert alert-danger'>${result.error}</div>`;
+        document.getElementById("admin-query-results").classList.remove("d-none");
+    }
+    } catch (error) {
+    console.error("Execution error:", error);
+    alert("An error occurred while executing the SQL query.");
+    }
+});
+});
+
+// --- USER PANEL JS ---
+async function fetchSchema() {
+const dbId = document.getElementById("database").value;
+if (!dbId || isNaN(parseInt(dbId))) {
+    alert("Please select a valid database");
+    return;
+}
+
+try {
+    document.getElementById("schema-text").innerText = "Loading...";
+    document.getElementById("schema-display").classList.remove("d-none");
+
+    const response = await fetch(`/fetch_schema/?database_id=${dbId}`);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+    const data = await response.json();
+    const schemaText = document.getElementById("schema-text");
+    schemaText.innerText = "";
+
+    for (const [table, columns] of Object.entries(data.schema)) {
+    schemaText.innerText += `Table: ${table}\n  Columns: ${columns.join(", ")}\n\n`;
+    }
+
+    const previewContent = document.getElementById("preview-content");
+    previewContent.innerHTML = "";
+
+    if (data.table_previews && Object.keys(data.table_previews).length > 0) {
+    for (const [table, html] of Object.entries(data.table_previews)) {
+        const tableHeader = document.createElement("h6");
+        tableHeader.textContent = table;
+        previewContent.appendChild(tableHeader);
+
+        const tableContainer = document.createElement("div");
+        tableContainer.innerHTML = html;
+        previewContent.appendChild(tableContainer);
+
+        const divider = document.createElement("hr");
+        previewContent.appendChild(divider);
+    }
+    document.getElementById("table-preview").classList.remove("d-none");
+    } else {
+    previewContent.innerHTML = "<div class='alert alert-warning'>No table previews available</div>";
+    document.getElementById("table-preview").classList.remove("d-none");
+    }
+} catch (error) {
+    console.error("Error fetching schema:", error);
+    document.getElementById("schema-text").innerText = `Error: ${error.message}`;
+}
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+const generateSQLBtn = document.getElementById("generateSQLButton");
+if (generateSQLBtn) generateSQLBtn.addEventListener("click", async () => {
+    const dbId = document.getElementById("database").value;
+    const userQuery = document.getElementById("user-query").value;
+
+    if (!dbId || isNaN(parseInt(dbId))) return alert("Please select a valid database first.");
+    if (!userQuery.trim()) return alert("Please enter your question.");
+
+    try {
+    const formData = new FormData();
+    formData.append("database_id", dbId);
+    formData.append("user_query", userQuery);
+
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    const response = await fetch("/process_query/", {
+        method: "POST",
+        headers: { "X-CSRFToken": csrfToken },
+        body: formData,
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+        document.getElementById("sql-text").value = result.sql_query;
+        document.getElementById("sql-output").classList.remove("d-none");
+    } else {
+        alert(result.error || "Failed to generate SQL query.");
+    }
+    } catch (error) {
+    console.error("Error generating SQL:", error);
+    alert("An error occurred while generating the SQL query.");
     }
 });
 
-function executeSQL() {
-    let databaseElement = document.getElementById("database");
-    let sqlOutputElement = document.getElementById("sql-output");
+const executeSQLBtn = document.getElementById("executeSQLButton");
+if (executeSQLBtn) executeSQLBtn.addEventListener("click", async () => {
+    const dbId = document.getElementById("database").value;
+    const sqlQuery = document.getElementById("sql-text").value;
 
-    if (!databaseElement || !sqlOutputElement) {
-        console.error("Database selection or SQL output field not found!");
-        return;
-    }
+    if (!dbId || isNaN(parseInt(dbId))) return alert("Please select a valid database.");
+    if (!sqlQuery.trim()) return alert("No SQL query to execute.");
 
-    let databaseId = databaseElement.value;
-    let sqlQuery = sqlOutputElement.innerText.trim();
-    let csrfTokenElement = document.querySelector("[name=csrfmiddlewaretoken]");
-    let csrfToken = csrfTokenElement ? csrfTokenElement.value : "";
+    try {
+    const formData = new FormData();
+    formData.append("database_id", dbId);
+    formData.append("sql_query", sqlQuery);
 
-    if (!databaseId || !sqlQuery) {
-        alert("Please generate a query first before executing.");
-        return;
-    }
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
-    console.log("Executing SQL with:", { databaseId, sqlQuery });
-
-    fetch("/text2sql/execute-query/", {
+    const response = await fetch("/execute_query/", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "X-CSRFToken": csrfToken,
-        },
-        body: `database_id=${databaseId}&sql_query=${encodeURIComponent(sqlQuery)}`,
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            alert("Error: " + data.error);
-            return;
-        }
-        if (data.message) {
-            alert(data.message);
-        } else {
-            document.getElementById("query-results").innerHTML = data.results;
-        }
-    })
-    .catch(error => console.error("Error executing SQL query:", error));
-}
+        headers: { "X-CSRFToken": csrfToken },
+        body: formData,
+    });
 
+    const result = await response.json();
+    const resultsTable = document.getElementById("results-table");
+    resultsTable.innerHTML = "";
 
+    if (response.ok) {
+        resultsTable.innerHTML = result.results || `<div class='alert alert-success'>${result.message}</div>`;
+        document.getElementById("query-results").classList.remove("d-none");
+    } else {
+        resultsTable.innerHTML = `<div class='alert alert-danger'>${result.error}</div>`;
+        document.getElementById("query-results").classList.remove("d-none");
+    }
+    } catch (error) {
+    console.error("Execution error:", error);
+    alert("An error occurred while executing the SQL query.");
+    }
+});
+});
