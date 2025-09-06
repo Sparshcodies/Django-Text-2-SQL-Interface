@@ -2,6 +2,10 @@
 
 SQL Genie is a Django-based web application that enables users to interact with databases using plain English. It integrates Google’s Gemini 2.0 Flash language model to convert natural language queries into SQL, supports real-time execution on live databases, and features a robust role-based access system.
 
+## LIVE Render Link
+
+- Render : [Link](https://django-text-2-sql-interface.onrender.com/)
+
 ## 🔧 Requirements
 
 - Python 3.10+
