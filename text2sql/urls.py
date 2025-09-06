@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views  # Import only your views, NOT the project-level urls.py
+from . import views
 from django.contrib.auth import views as auth_views
 
 urlpatterns = [

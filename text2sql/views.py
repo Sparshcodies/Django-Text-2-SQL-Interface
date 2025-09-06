@@ -1,20 +1,17 @@
-import sqlite3
-import os
-import logging
 import re
-# import types
+import logging
+import sqlite3
 import pandas as pd
-from django.shortcuts import render, redirect
-from django.http import JsonResponse
-from sqlalchemy import create_engine, text
 from google import genai
-from django.conf import settings
-from django.contrib.auth.decorators import login_required, user_passes_test
+from sqlalchemy import create_engine, text
 from .models import UploadedDatabase, UserQuery
+from django.conf import settings
+from django.http import JsonResponse
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User
 from django.contrib import messages
-from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.views import LogoutView
 
 logger = logging.getLogger(__name__)

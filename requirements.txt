@@ -1,0 +1,5 @@
+Django
+python_dotenv
+google-generativeai
+pandas
+sqlalchemy
