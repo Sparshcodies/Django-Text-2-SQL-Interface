@@ -3,3 +3,4 @@ python_dotenv
 google-generativeai
 pandas
 sqlalchemy
+gunicorn
