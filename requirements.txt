@@ -4,4 +4,4 @@ google-genai
 pandas
 sqlalchemy
 gunicorn
-
+whitenoise
