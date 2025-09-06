@@ -1,8 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-
-
 class UserQuery(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     database = models.ForeignKey('UploadedDatabase', on_delete=models.CASCADE)

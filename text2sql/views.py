@@ -11,7 +11,6 @@ from google import genai
 from django.conf import settings
 from django.contrib.auth.decorators import login_required, user_passes_test
 from .models import UploadedDatabase, UserQuery
-from .forms import DatabaseUploadForm
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User
 from django.contrib import messages
@@ -20,11 +19,8 @@ from django.contrib.auth.views import LogoutView
 
 logger = logging.getLogger(__name__)
 
-# Configure Gemini API
 
 client = genai.Client(api_key=settings.GEMINI_API_KEY)
-# configure(api_key=settings.GEMINI_API_KEY)
-# gemini_model = GenerativeModel('gemini-pro')
 
 def home(request):
     return render(request, 'home.html')
@@ -43,7 +39,7 @@ def login_admin_view(request):
             if user.is_superuser:
                 login(request, user)
                 messages.success(request, "Admin login successful!")
-                return redirect('admin_panel')  # ✅ redirect to admin panel
+                return redirect('admin_panel')
             else:
                 messages.error(request, "You are not an admin.")
         else:
@@ -59,7 +55,7 @@ def login_user_view(request):
 
         if user is not None and not user.is_superuser:
             login(request, user)
-            return redirect('user_panel')  # replace with your user dashboard URL name
+            return redirect('user_panel')
         else:
             messages.error(request, "Invalid credentials or not a user account.")
 
@@ -120,7 +116,6 @@ def admin_panel(request):
                     'rows': [["Query executed successfully."]]
                 }
 
-            # Optional: Save the query to UserQuery table for tracking (as admin query)
             if request.user.is_authenticated:
                 UserQuery.objects.create(user=request.user, text=query)
 
@@ -145,7 +140,6 @@ def user_panel(request):
 
 @login_required
 @user_passes_test(is_admin)
-
 def upload_database(request):
     if request.method == 'POST':
         uploaded_file = request.FILES.get('database_file')
@@ -162,6 +156,7 @@ def upload_database(request):
         return redirect('admin_panel')  # Change to match your url name
 
     return redirect('admin_panel')
+
 def get_schema(database_path):
     """Extracts schema information from an SQLite database using SQLAlchemy"""
     engine = create_engine(f'sqlite:///{database_path}')
