@@ -1,6 +1,7 @@
 Django
 python_dotenv
-google-generativeai
+google-genai
 pandas
 sqlalchemy
 gunicorn
+
